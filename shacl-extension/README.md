@@ -10,6 +10,7 @@ The SHACL Shapes Editor extension provides a user-friendly interface for authori
 - Edit existing SHACL Shapes
 - Visualize SHACL Shapes
 - Validate RDF graphs against SHACL Shapes
+- Side-by-side view of SHACL shapes graph and data graph with visual indication of violating triples
 
 ## Installation
 
@@ -37,6 +38,14 @@ The SHACL Shapes Editor extension provides a user-friendly interface for authori
 1. Open the RDF graph document you want to validate.
 2. Open the SHACL Shape document you want to use for validation.
 3. Run the validation command from the Command Palette.
+
+### Side-by-Side View of SHACL Shapes Graph and Data Graph
+
+1. Open the Command Palette by pressing `Ctrl+Shift+P`.
+2. Type "Show Side-by-Side View" and select the command.
+3. Select the SHACL shapes graph document.
+4. Select the data graph document.
+5. The two documents will be opened side-by-side with visual indication of violating triples in the data graph.
 
 ## Examples
 
