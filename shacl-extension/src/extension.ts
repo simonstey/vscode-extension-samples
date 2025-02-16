@@ -97,4 +97,82 @@ export function activate(context: vscode.ExtensionContext) {
     });
 
     context.subscriptions.push(showFocusNodesCommand);
+
+    const showSideBySideViewCommand = vscode.commands.registerCommand('shaclExtension.showSideBySideView', async () => {
+        const shapeDocument = await vscode.window.showOpenDialog({ filters: { 'Turtle Files': ['ttl'] } });
+        if (!shapeDocument || shapeDocument.length === 0) {
+            return;
+        }
+
+        const dataDocument = await vscode.window.showOpenDialog({ filters: { 'Turtle Files': ['ttl'] } });
+        if (!dataDocument || dataDocument.length === 0) {
+            return;
+        }
+
+        const shapeEditor = await vscode.window.showTextDocument(await vscode.workspace.openTextDocument(shapeDocument[0]), { viewColumn: vscode.ViewColumn.One });
+        const dataEditor = await vscode.window.showTextDocument(await vscode.workspace.openTextDocument(dataDocument[0]), { viewColumn: vscode.ViewColumn.Two });
+
+        const shapeContent = fs.readFileSync(shapeDocument[0].fsPath, 'utf8');
+        const dataContent = fs.readFileSync(dataDocument[0].fsPath, 'utf8');
+
+        const shapeGraph = rdf.dataset().import(rdf.parse(shapeContent));
+        const dataGraph = rdf.dataset().import(rdf.parse(dataContent));
+
+        const validationReport = await rdf.validate(dataGraph, shapeGraph);
+
+        if (!validationReport.conforms) {
+            const decorationType = vscode.window.createTextEditorDecorationType({
+                backgroundColor: 'rgba(255,0,0,0.3)'
+            });
+
+            const ranges = validationReport.results.map(result => {
+                return new vscode.Range(
+                    new vscode.Position(result.focusNode.line - 1, result.focusNode.column - 1),
+                    new vscode.Position(result.focusNode.line - 1, result.focusNode.column - 1 + result.focusNode.length)
+                );
+            });
+
+            dataEditor.setDecorations(decorationType, ranges);
+        }
+
+        const updateViews = async () => {
+            const updatedShapeContent = shapeEditor.document.getText();
+            const updatedDataContent = dataEditor.document.getText();
+
+            const updatedShapeGraph = rdf.dataset().import(rdf.parse(updatedShapeContent));
+            const updatedDataGraph = rdf.dataset().import(rdf.parse(updatedDataContent));
+
+            const updatedValidationReport = await rdf.validate(updatedDataGraph, updatedShapeGraph);
+
+            if (!updatedValidationReport.conforms) {
+                const updatedRanges = updatedValidationReport.results.map(result => {
+                    return new vscode.Range(
+                        new vscode.Position(result.focusNode.line - 1, result.focusNode.column - 1),
+                        new vscode.Position(result.focusNode.line - 1, result.focusNode.column - 1 + result.focusNode.length)
+                    );
+                });
+
+                dataEditor.setDecorations(decorationType, updatedRanges);
+            } else {
+                dataEditor.setDecorations(decorationType, []);
+            }
+        };
+
+        const shapeDocumentChangeSubscription = vscode.workspace.onDidChangeTextDocument(event => {
+            if (event.document.uri.fsPath === shapeDocument[0].fsPath) {
+                updateViews();
+            }
+        });
+
+        const dataDocumentChangeSubscription = vscode.workspace.onDidChangeTextDocument(event => {
+            if (event.document.uri.fsPath === dataDocument[0].fsPath) {
+                updateViews();
+            }
+        });
+
+        context.subscriptions.push(shapeDocumentChangeSubscription);
+        context.subscriptions.push(dataDocumentChangeSubscription);
+    });
+
+    context.subscriptions.push(showSideBySideViewCommand);
 }
